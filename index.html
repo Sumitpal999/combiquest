@@ -1,0 +1,353 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CombiQuest – The Combinatorics RPG</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--pn:#fff4e6;--cd:#fff;--bd:#f7c59f;--tx:#3a1d3f;--mut:#7a5a7a}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--pn:#2a1740;--cd:#3b2358;--bd:#6b3f8f;--tx:#fff1e6;--mut:#d9b8e8}}
+:root[data-theme="dark"]{--pn:#2a1740;--cd:#3b2358;--bd:#6b3f8f;--tx:#fff1e6;--mut:#d9b8e8}
+*{box-sizing:inherit}
+body{height:100%;margin:0;overflow:hidden;background:#f3a37a;color:var(--tx);font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif}
+#app{height:100%;position:relative}
+#cv{position:absolute;left:0;right:0;top:0;bottom:50%;overflow:hidden}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+#hud{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none}
+#hud span{background:rgba(255,244,230,.92);color:#3a1d3f;border:2px solid #ffb36b;border-radius:99px;padding:5px 12px;font-weight:700;font-size:.82rem}
+#toast{position:absolute;z-index:30;left:50%;top:50%;transform:translate(-50%,-50%);background:#3a1d3f;color:#fff;padding:8px 14px;border-radius:12px;font-size:.9rem;display:none;max-width:90%;text-align:center}
+#side{position:absolute;left:0;right:0;bottom:0;height:50%;background:var(--pn);border-top:5px solid #ff7a59;border-radius:24px 24px 0 0;overflow:auto;padding:14px}
+#side>*{max-width:620px;margin-left:auto;margin-right:auto}
+h1{background:linear-gradient(90deg,#ff7a59,#ec4899,#8b5cf6);-webkit-background-clip:text;background-clip:text;color:transparent;text-align:center;letter-spacing:2px;margin:2px 0;font-size:2rem}h2{margin:0 0 8px;font-size:1.1rem}
+.cd{background:var(--cd);border:2px solid var(--bd);border-radius:16px;padding:12px;margin-bottom:10px}
+small,.mut{color:var(--mut);font-size:.82rem}p{margin:6px 0}
+button{font:inherit;cursor:pointer}
+.b{display:block;width:100%;border:0;border-radius:14px;padding:12px;margin-top:8px;min-height:46px;font-weight:700;color:#fff;background:linear-gradient(90deg,#ff7a59,#ff4d8d);box-shadow:0 3px 0 rgba(0,0,0,.18)}
+.b.g{background:linear-gradient(90deg,#14b8a6,#22c55e)}.b.m{background:linear-gradient(90deg,#8b5cf6,#ec4899)}
+.gr{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gr .b{margin:0 0 4px}
+input{width:100%;padding:12px;margin-top:8px;border-radius:12px;border:2px solid var(--bd);background:var(--cd);color:var(--tx);font:inherit}
+.bar{height:9px;background:rgba(139,92,246,.2);border-radius:9px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;background:linear-gradient(90deg,#14b8a6,#22c55e);transition:width .3s}.bar.r i{background:linear-gradient(90deg,#fb923c,#e11d48)}
+.opt{display:block;width:100%;text-align:left;background:transparent;color:var(--tx);border:2px solid var(--bd);border-radius:12px;padding:11px;margin-top:8px;min-height:46px}
+.opt.ok{border-color:#16a34a;background:rgba(34,197,94,.25)}.opt.bad{border-color:#e11d48;background:rgba(225,29,72,.22)}
+.ex{border-left:4px solid #ff7a59;padding:6px 10px;margin:8px 0;font-size:.9rem}
+.rw{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:9px 12px}.lk{opacity:.5}
+.sm{border:0;border-radius:10px;background:#8b5cf6;color:#fff;padding:7px 11px;margin:6px 4px 0 0;font-weight:700}
+.fr{display:flex;gap:6px}.fr .sm{flex:1;margin:0;padding:9px 4px;font-size:.82rem}
+.lt{display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:50%;background:#8b5cf6;color:#fff;margin-right:10px;font-size:.85rem}.opt.dim{opacity:.45}
+.big{font-size:3rem;text-align:center}
+</style></head><body>
+<div id="app"><div id="cv"></div><div id="toast"></div><div id="hud"></div><div id="side"></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const Q=[
+["Counting Principles","A student has 5 shirts and 4 pants. How many different outfits are possible?",["9","20","54","10"],1,"Multiplication rule: 5 × 4 = 20 (independent choices multiply)."],
+["Counting Principles","Choose ONE project from 8 AI projects OR 6 web projects (no overlap). How many choices?",["48","14","2","86"],1,"Addition rule for mutually exclusive options: 8 + 6 = 14."],
+["Permutations","How many ways can the letters of CODE be arranged?",["12","24","16","8"],1,"All letters distinct: 4! = 24."],
+["Permutations","Number of distinct arrangements of the letters of LEVEL?",["120","60","30","15"],2,"5!/(2!·2!) = 120/4 = 30 (L twice, E twice)."],
+["Combinations","In how many ways can a team of 3 be chosen from 10 students?",["720","120","30","360"],1,"C(10,3) = 10·9·8 / 3! = 120."],
+["Combinations","C(12,5) is equal to:",["C(12,6)","C(12,7)","C(12,8)","C(12,12)"],1,"Symmetry identity: C(n,r) = C(n,n−r), so C(12,5) = C(12,7)."],
+["Binomial Theorem","How many terms are there in the expansion of (x + y)^8?",["8","9","10","16"],1,"(x+y)^n has n + 1 terms, so 9."],
+["Binomial Theorem","The number of subsets of a 5-element set equals Σ C(5,k) =",["10","25","32","120"],2,"Σ C(n,k) = 2^n, so 2^5 = 32."],
+["Pascal's Triangle","By Pascal's rule, C(5,2) + C(5,3) =",["10","15","20","30"],2,"C(n,k)+C(n,k+1) = C(n+1,k+1) → C(6,3) = 20."],
+["Pigeonhole Principle","Socks of 3 colours are in a drawer. Minimum socks to pick to GUARANTEE a matching pair?",["3","4","5","6"],1,"3 colours = 3 holes; picking 4 socks forces two in the same hole."],
+["Pigeonhole Principle","Generalized pigeonhole: 50 students, 12 birth months. At least how many share a month?",["4","5","6","50"],1,"⌈50/12⌉ = ⌈4.17⌉ = 5."],
+["Pigeonhole Principle","A hash table has 100 slots and 101 keys are inserted. What is guaranteed?",["No collision","At least one collision","Exactly one collision","All keys collide"],1,"101 pigeons, 100 holes → some slot holds ≥ 2 keys."],
+["Inclusion–Exclusion","|A| = 20, |B| = 15, |A∩B| = 5. Find |A∪B|.",["40","35","30","25"],2,"|A∪B| = 20 + 15 − 5 = 30."],
+["Inclusion–Exclusion","How many integers from 1 to 100 are divisible by 2 or 3?",["83","67","66","50"],1,"50 + 33 − 16 = 67."],
+["Derangements","D₄, the number of derangements of 4 objects, is:",["6","9","12","24"],1,"D4 = 4!(1 − 1 + 1/2 − 1/6 + 1/24) = 9."],
+["Derangements","3 letters are put randomly into 3 addressed envelopes. In how many ways does NO letter go to its correct envelope?",["1","2","3","6"],1,"D3 = 2 (the two cyclic shifts)."],
+["Multisets","Choose 4 donuts from 3 flavours (repeats allowed). Number of ways?",["12","15","81","24"],1,"C(4+3−1, 4) = C(6,4) = 15 (stars and bars)."],
+["Multisets","Non-negative integer solutions of x + y + z = 10:",["66","120","45","36"],0,"C(10+3−1, 2) = C(12,2) = 66."],
+["Integer Partitions","Number of partitions of the integer 4:",["4","5","6","8"],1,"4, 3+1, 2+2, 2+1+1, 1+1+1+1 = 5."],
+["Compositions","Number of compositions (ordered partitions) of 5:",["10","16","32","7"],1,"A composition of n has 2^(n−1) forms: 2^4 = 16."],
+["Recurrence Relations","aₙ = 2aₙ₋₁ with a₀ = 3. Closed form?",["3 + 2n","3·2ⁿ","2·3ⁿ","3ⁿ"],1,"Geometric growth: aₙ = a₀·2ⁿ = 3·2ⁿ."],
+["Recurrence Relations","Fibonacci: a₀=0, a₁=1, aₙ = aₙ₋₁ + aₙ₋₂. What is a₆?",["5","8","13","21"],1,"0,1,1,2,3,5,8 → a6 = 8."],
+["Recurrence Relations","Tower of Hanoi: T(n) = 2T(n−1) + 1, T(1) = 1. Find T(4).",["8","15","16","31"],1,"T2=3, T3=7, T4=15 (= 2ⁿ − 1)."],
+["Recurrence Relations","Characteristic roots of aₙ = 5aₙ₋₁ − 6aₙ₋₂:",["1 and 6","2 and 3","−2 and −3","5 and 6"],1,"r² − 5r + 6 = 0 → (r−2)(r−3) = 0."],
+["Recurrence in Algorithms","Merge sort satisfies T(n) = 2T(n/2) + n. Its running time is:",["O(n)","O(n²)","O(n log n)","O(log n)"],2,"Log n levels, each costing n work → O(n log n)."],
+["Generating Functions","The generating function of the sequence 1, 1, 1, 1, … is:",["1/(1−x)","1/(1+x)","1−x","eˣ"],0,"1 + x + x² + … = 1/(1−x) for |x| < 1."],
+["Generating Functions","The coefficient of x³ in (1 + x)⁵ is:",["5","10","15","3"],1,"Coefficient of xᵏ is C(5,k); C(5,3) = 10."],
+["Counting Principles","A PIN has 4 digits (0–9) and digits may repeat. How many PINs exist?",["10000","5040","9000","40"],0,"Four independent choices of 10: 10×10×10×10 = 10,000."],
+["Counting Principles","A password is 1 letter (26 choices) followed by 2 digits (repeats allowed). How many passwords?",["2600","2340","288","78"],0,"26 × 10 × 10 = 2600."],
+["Permutations","A PIN has 4 DISTINCT digits. How many PINs are possible?",["10000","5040","210","720"],1,"P(10,4) = 10·9·8·7 = 5040."],
+["Permutations","In how many ways can 3 of 6 different books be arranged on a shelf?",["20","120","216","720"],1,"P(6,3) = 6·5·4 = 120."],
+["Combinations","How many ways to choose 2 committee members from 6 people?",["12","15","30","36"],1,"C(6,2) = 6·5/2 = 15."],
+["Combinations","Value of C(8,3):",["24","56","336","512"],1,"8·7·6 / 3! = 336/6 = 56."],
+["Binomial Theorem","In (x + y)³, the coefficient of x²y is:",["1","2","3","6"],2,"Coefficient = C(3,1) = 3."],
+["Pascal's Triangle","The sum of all entries in row 6 of Pascal's triangle (row 0 = 1) is:",["32","64","36","12"],1,"Row n sums to 2^n, so 2^6 = 64."],
+["Pigeonhole Principle","Minimum cards from a standard deck to GUARANTEE two of the same suit?",["4","5","13","14"],1,"4 suits are the holes; 5 cards force a repeat."],
+["Inclusion–Exclusion","30 students like Python, 20 like Java, 10 like both. How many like at least one?",["50","40","30","60"],1,"30 + 20 − 10 = 40."],
+["Derangements","D₅, the number of derangements of 5 objects, is:",["24","44","53","120"],1,"D5 = 5·D4 − 1 = 45 − 1 = 44."],
+["Multisets","How many multisets of size 3 can be formed from {a, b}?",["3","4","6","8"],1,"C(3+2−1, 3) = C(4,3) = 4: aaa, aab, abb, bbb."],
+["Integer Partitions","Number of partitions of the integer 5:",["5","6","7","8"],2,"5, 4+1, 3+2, 3+1+1, 2+2+1, 2+1+1+1, 1+1+1+1+1 = 7."],
+["Compositions","Number of compositions of 4 into exactly 2 positive parts:",["2","3","4","6"],1,"1+3, 2+2, 3+1 = C(3,1) = 3."],
+["Recurrence in Algorithms","Binary search satisfies T(n) = T(n/2) + 1. Its running time is:",["O(n)","O(log n)","O(n log n)","O(1)"],1,"The size halves each step, so about log₂ n steps."],
+["Generating Functions","The generating function of aₙ = 2ⁿ is:",["1/(1−2x)","1/(2−x)","2/(1−x)","1/(1+2x)"],0,"Σ 2ⁿxⁿ = Σ (2x)ⁿ = 1/(1−2x)."]
+];
+// sector: [name, tutor robot, topics, lesson]
+const Z=[
+["Counting Castle","Sage Addy",["Counting Principles"],"Addition rule: mutually exclusive choices ADD (m+n). Multiplication rule: independent steps MULTIPLY (m×n). 5 shirts × 4 pants = 20 outfits."],
+["Permutation Lab","Prof Perm",["Permutations"],"Order matters. n distinct objects can be arranged in n! ways. With repeated letters divide by factorials: LEVEL = 5!/(2!·2!) = 30."],
+["Combination Challenge","Dr Choose",["Combinations"],"Order does not matter: C(n,r) = n!/(r!(n−r)!). Symmetry: C(n,r) = C(n,n−r). Example: C(10,3) = 120."],
+["Binomial Temple","Monk Pascal",["Binomial Theorem","Pascal's Triangle"],"(x+y)^n has n+1 terms with coefficients C(n,k). Pascal's rule: C(n,k)+C(n,k+1) = C(n+1,k+1). Each row sums to 2^n."],
+["Pigeonhole Prison","Warden Hole",["Pigeonhole Principle"],"n+1 pigeons in n holes: some hole has 2 or more. Generalized: some hole has at least ⌈m/n⌉. In hashing, more keys than slots forces a collision."],
+["Inclusion-Exclusion Maze","Guide Venn",["Inclusion–Exclusion"],"|A∪B| = |A|+|B|−|A∩B|. For three sets: add the singles, subtract the pairs, add the triple intersection."],
+["Derangement Mission","Agent Mixup",["Derangements"],"Arrangements where nothing stays in its original place. D(n) = n!(1 − 1/1! + 1/2! − … ± 1/n!). D1=0, D2=1, D3=2, D4=9."],
+["Multiset Market","Madam Multi",["Multisets"],"Choosing r items from n types with repetition: C(r+n−1, r) (stars and bars). Equals non-negative solutions of x1+…+xn = r."],
+["Number Partition Dungeon","Lord Part",["Integer Partitions","Compositions"],"Partition: split n into unordered parts (p(4)=5). Composition: ordered parts; n has 2^(n−1) compositions."],
+["Recurrence Tower","Wizard Rec",["Recurrence Relations","Recurrence in Algorithms"],"Solve linear recurrences via the characteristic equation. Hanoi T(n)=2T(n−1)+1 gives 2^n−1. Merge sort T(n)=2T(n/2)+n gives O(n log n)."],
+["Generating Function Galaxy","Oracle GF",["Generating Functions"],"A sequence aₙ becomes the series Σ aₙxⁿ. 1,1,1,… ↔ 1/(1−x). In (1+x)^n the coefficient of xᵏ is C(n,k)."]];
+const sh=a=>a.slice().sort(()=>Math.random()-.5),$=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>"&#"+c.charCodeAt(0)+";");
+let P={id:"",name:"",cleared:[],xp:0,coins:20,stars:0,inv:{pot:1,scr:1},chests:[],acc:{},mb:{}},F,K,A,D,bt=null,tg=null,act=null;
+const ld=k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}};
+const sv=()=>{try{localStorage.setItem("nn_"+P.id,JSON.stringify(P));localStorage.setItem("nn_last",P.id)}catch(e){}};
+const lv=()=>1+Math.floor(P.xp/70),mhp=()=>30+(P.hpb||0),RK=["Novice","Apprentice","Adventurer","Champion","Grandmaster"],rk=()=>RK[Math.min(lv()-1,4)];
+const unl=i=>i==0||P.cleared.includes(i-1),done=i=>P.cleared.includes(i),cur=()=>Z.findIndex((_,i)=>!done(i));
+const ui=h=>{$("side").innerHTML=h;$("side").scrollTop=0};
+let tt;const msg=t=>{const e=$("toast");e.textContent=t;e.style.display="block";clearTimeout(tt);tt=setTimeout(()=>e.style.display="none",2300)};
+// ---------- 3D sunset isles ----------
+const cvE=$("cv"),R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));cvE.appendChild(R.domElement);
+const sc=new THREE.Scene();
+(function(){const c=document.createElement("canvas");c.width=2;c.height=256;const x=c.getContext("2d"),g=x.createLinearGradient(0,0,0,256);g.addColorStop(0,"#3b1d6e");g.addColorStop(.45,"#e0559a");g.addColorStop(.75,"#ff9a6b");g.addColorStop(1,"#ffd29a");x.fillStyle=g;x.fillRect(0,0,2,256);sc.background=new THREE.CanvasTexture(c)})();
+sc.fog=new THREE.Fog(0xf6a97a,45,140);
+const cam=new THREE.PerspectiveCamera(58,1,.1,260);
+sc.add(new THREE.HemisphereLight(0xffe0bd,0x2b6cb0,1));const dl=new THREE.DirectionalLight(0xffb07a,.9);dl.position.set(-10,14,-20);sc.add(dl);
+const M=(c,e)=>new THREE.MeshStandardMaterial({color:c,emissive:e||0,roughness:.6,metalness:.1});
+const box=(w,h,d,c,x,y,z,p,e)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,e));m.position.set(x,y,z);(p||sc).add(m);return m};
+const cyl=(a,b,h,c,x,y,z,p,n)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(a,b,h,n||20),M(c));m.position.set(x,y,z);(p||sc).add(m);return m};
+const dmg=document.createElement("div");dmg.id="dmg";dmg.style.cssText="position:absolute;transform:translate(-50%,-50%);font-weight:900;font-size:2rem;pointer-events:none;display:none;color:#fff;text-shadow:0 2px 0 #fff,0 0 8px #000;z-index:5";cvE.appendChild(dmg);
+const sea=new THREE.Mesh(new THREE.PlaneGeometry(500,500),M(0x1f7fb5,0x0b3d66));sea.rotation.x=-Math.PI/2;sea.position.y=-.4;sc.add(sea);
+const beach=new THREE.Mesh(new THREE.PlaneGeometry(30,300),M(0xf0d6a2));beach.rotation.x=-Math.PI/2;beach.position.set(0,.02,-90);sc.add(beach);
+const gr=new THREE.Mesh(new THREE.PlaneGeometry(500,500),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));gr.rotation.x=-Math.PI/2;sc.add(gr);
+const sun=new THREE.Mesh(new THREE.SphereGeometry(16,24,18),new THREE.MeshBasicMaterial({color:0xffe08a,fog:false}));sun.position.set(0,12,-235);sc.add(sun);
+for(let k=0;k<16;k++){const g=new THREE.Group();[0,1,2].forEach(n=>{const b=new THREE.Mesh(new THREE.SphereGeometry(2.5+n*.5,10,8),new THREE.MeshBasicMaterial({color:0xffe9f3}));b.position.set(n*3-3,0,0);b.scale.y=.6;g.add(b)});g.position.set((Math.random()-.5)*160,20+Math.random()*16,-10-Math.random()*190);sc.add(g)}
+for(let k=0;k<80;k++){box(2.6,.25,1.8,k%2?0x9a6a3a:0x8a5a2e,0,.15,3-k*2.4);if(k%4==0)[-1,1].forEach(s=>{cyl(.08,.08,1.6,0x5a3a1a,s*1.9,.9,3-k*2.4,0,6);const l=new THREE.Mesh(new THREE.SphereGeometry(.22,8,8),M(0xfde047,0xfacc15));l.position.set(s*1.9,1.8,3-k*2.4);sc.add(l)})}
+function person(body,hat){const g=new THREE.Group();box(.8,1.1,.5,body,0,1.3,0,g);box(.5,.8,.4,0x2d3a8c,0,.45,0,g);const h=new THREE.Mesh(new THREE.SphereGeometry(.42,14,10),M(0xf2cfa5));h.position.y=2.2;g.add(h);
+if(hat){const c=new THREE.Mesh(new THREE.ConeGeometry(.5,1,8),M(hat));c.position.y=3;g.add(c)}else box(.8,.25,.8,0x5a2e12,0,2.55,0,g);return g}
+function lab(t,col){const c=document.createElement("canvas");c.width=512;c.height=96;const x=c.getContext("2d");x.fillStyle=col;x.beginPath();x.roundRect?x.roundRect(4,4,504,88,40):x.rect(4,4,504,88);x.fill();x.strokeStyle="#ff7a59";x.lineWidth=6;x.stroke();x.fillStyle="#3a1d3f";x.font="bold 30px sans-serif";x.textAlign="center";x.textBaseline="middle";x.fillText(t,256,50);
+const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false}));s.scale.set(7.5,1.4,1);return s}
+const PAL=[0xf97316,0x06b6d4,0xa78bfa,0x22c55e,0xf472b6,0xeab308,0x3b82f6,0xf43f5e,0x14b8a6,0xc084fc,0xf59e0b];
+const ints=[],ZO=[];
+Z.forEach((z,i)=>{const sx=i%2?-1:1,zz=-14*(i+1),hx=sx*9;
+cyl(5.2,5.6,.7,0xe9c986,hx,.35,zz);cyl(4.6,4.6,.25,0x6ccf7f,hx,.78,zz);
+const pg=new THREE.Group();pg.position.set(hx,0,zz);const pl=cyl(1.4,1.7,5,PAL[i],0,3.3,0,pg,12);const roof=new THREE.Mesh(new THREE.ConeGeometry(2.2,2.4,12),M(0xfff1e0));roof.position.y=7;pg.add(roof);
+box(.7,1,.1,0xfde68a,0,3.8,1.45,pg,0xfacc15);const fl=box(.1,1.2,.1,0x5a3a1a,0,8.8,0,pg);pg.userData={i,k:"t"};
+const t=person(PAL[i],PAL[i]);t.position.set(sx*5.5,1,zz+2);t.userData={i,k:"t"};
+const mo=new THREE.Group();mo.position.set(sx*7,.9,zz-3);const bd=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),M(0x34d399,0x065f46));bd.scale.set(1.2,.9,1.2);bd.position.y=.8;mo.add(bd);
+[-.4,.4].forEach(e=>{const w=new THREE.Mesh(new THREE.SphereGeometry(.22,8,8),M(0xffffff));w.position.set(e,1.1,.9);mo.add(w);box(.1,.1,.1,0x111111,e,1.1,1.1,mo)});mo.userData={i,k:"m"};
+const c=new THREE.Group();c.position.set(-sx*3.4,0,zz+6);box(1.3,.7,.9,0x8b5a2b,0,.4,0,c);box(1.3,.3,.9,0xd9a21b,0,.9,0,c,0x7c5a05);c.userData={i,k:"c"};
+[pg,t,mo,c].forEach(o=>{sc.add(o);ints.push(o)});ZO[i]={pl,pg,t,mo,bd,c,s:sx,x:hx,z:zz,lb:null}});
+function world(){Z.forEach((z,i)=>{const o=ZO[i];if(o.lb)sc.remove(o.lb);o.lb=lab((done(i)?"✅ ":unl(i)?"":"🔒 ")+(i+1)+". "+z[0],done(i)?"#bbf7d0":unl(i)?"#fff4e6":"#d1d5db");o.lb.position.set(o.x,10.6,o.z);sc.add(o.lb);
+o.pl.material.color.setHex(unl(i)?PAL[i]:0x9ca3af);o.mo.visible=!done(i);o.c.visible=!P.chests.includes(i)})}
+const hero=person(0x14b8a6);sc.add(hero);
+const st=new THREE.Group();st.position.set(-6,0,-5);box(3,1,1.6,0x8b5a2b,0,.5,0,st);[-1.4,1.4].forEach(x=>cyl(.1,.1,3,0x5a3a1a,x,1.5,.7,st,6));
+const rf=new THREE.Mesh(new THREE.ConeGeometry(2.8,1.3,4),M(0xf59e0b,0x7c4a03));rf.position.set(0,3.5,.3);rf.rotation.y=Math.PI/4;st.add(rf);const tr=person(0xc8a030,0xc8a030);tr.position.set(0,0,-.9);st.add(tr);st.userData={i:0,k:"s"};sc.add(st);ints.push(st);
+const sl=lab("🛒 Trader Multi","#fde68a");sl.position.set(-6,5.6,-5);sc.add(sl);
+const walk=(x,z,f)=>{tg=new THREE.Vector3(Math.max(-13,Math.min(13,x)),0,Math.max(-175,Math.min(3,z)));act=f||null};
+const rc=new THREE.Raycaster(),mv=new THREE.Vector2();
+R.domElement.addEventListener("pointerdown",e=>{const b=R.domElement.getBoundingClientRect();mv.set((e.clientX-b.left)/b.width*2-1,-((e.clientY-b.top)/b.height)*2+1);rc.setFromCamera(mv,cam);
+const hit=rc.intersectObjects(ints,true)[0];
+if(hit){let o=hit.object;while(o&&!o.userData.k)o=o.parent;if(o){touch(o.userData);return}}
+const g=rc.intersectObject(gr)[0];if(g)walk(g.point.x,g.point.z)});
+function touch(u){if(!P.id)return msg("Register your hero first!");if(!unl(u.i))return msg("🔒 Clear "+Z[u.i-1][0]+" first!");u.k=="t"?goT(u.i):u.k=="m"?goM(u.i):u.k=="s"?goS():goC(u.i)}
+const goT=i=>{const o=ZO[i];walk(o.t.position.x-o.s*1.5,o.t.position.z+1,()=>study(i))};
+const goM=i=>{const o=ZO[i];if(done(i))return msg("Zone already cleared!");walk(o.mo.position.x-o.s*2.5,o.mo.position.z+1.5,()=>fight(i))};
+const goS=()=>walk(-3,-4,shop),goC=i=>{const o=ZO[i];walk(-o.s*1.8,o.z+6,()=>pod(i))};
+new ResizeObserver(()=>{const w=cvE.clientWidth,h=cvE.clientHeight;R.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}).observe(cvE);
+const AX=80,AZ=-20,arenaG=new THREE.Group();arenaG.visible=false;sc.add(arenaG);
+cyl(8,8.6,.8,0xd8cfe8,AX,-.2,AZ,arenaG,32);cyl(7,7,.2,0xece6f7,AX,.25,AZ,arenaG,32);
+[-8,0,8].forEach(k=>cyl(.9,1,8,0xe8dcc8,AX+k,4,AZ-6,arenaG,16));
+const bhP=new THREE.Group(),bh=person(0x14b8a6);bh.rotation.y=Math.PI/2;bh.position.y=-1.3;bhP.add(bh);arenaG.add(bhP);
+const bm=new THREE.Group(),bmB=new THREE.Mesh(new THREE.SphereGeometry(1.2,16,12),M(0x34d399,0x065f46));bmB.scale.y=.9;bmB.position.y=.8;bm.add(bmB);
+[-.45,.45].forEach(e=>{const w=new THREE.Mesh(new THREE.SphereGeometry(.28,8,8),M(0xffffff));w.position.set(e,1.2,1.1);bm.add(w);box(.12,.12,.12,0x111111,e,1.2,1.35,bm)});const bmP=new THREE.Group();bm.rotation.y=-Math.PI/2;bm.position.y=-.8;bmP.add(bm);arenaG.add(bmP);
+const ball=new THREE.Mesh(new THREE.SphereGeometry(.4,12,10),M(0xa855f7,0x7e22ce));ball.visible=false;arenaG.add(ball);
+const mkS=(r,n)=>[...Array(n)].map(()=>{const m=new THREE.Mesh(new THREE.SphereGeometry(r,8,6),new THREE.MeshBasicMaterial({color:0xffffff}));m.visible=false;arenaG.add(m);return m}),trail=mkS(.3,6),burst=mkS(.2,10);
+const kb=u=>{u-=.8;if(u<0)return[0,0,0];if(u<1.1){const e=u/1.1;return[7*(1-(1-e)*(1-e)),3.5*Math.sin(Math.PI*e),e*12.57]}if(u<1.5){const e=(u-1.1)/.4;return[7+.8*e,.8*(1-e)*Math.abs(Math.sin(e*6.28)),12.57]}if(u<1.9)return[7.8,0,12.57];if(u<2.5){const e=(u-1.9)/.6,q=e*e*(3-2*e);return[7.8*(1-q),0,12.57*(1-q)]}return[0,0,0]};
+const ATK=u=>u<.35?-.8*u/.35:u<.55?-.8+1.6*(u-.35)/.2:u<1?.8*(1-(u-.55)/.45):0;
+const clk=new THREE.Clock();
+(function loop(){requestAnimationFrame(loop);const dt=Math.min(clk.getDelta(),.05),t=clk.elapsedTime;let m=false;
+if(tg){const d=tg.clone().sub(hero.position);d.y=0;const L=d.length();if(L<.15){tg=null;if(act){const a=act;act=null;a()}}else{m=true;hero.rotation.y=Math.atan2(d.x,d.z);hero.position.addScaledVector(d,Math.min(L,7*dt)/L)}}
+hero.position.y=m?Math.abs(Math.sin(t*12))*.15:0;
+ZO.forEach((o,i)=>{o.bd.scale.y=.9+Math.sin(t*3+i)*.1;o.mo.position.y=.9+Math.abs(Math.sin(t*2+i))*.4});
+arenaG.visible=!!bt;hero.visible=!bt;
+if(bt){const x=bt.fx,u=x?t-x.t0:9,mh=!!x&&x.w=="m",hit=!!x&&x.w=="h",dd=!!x&&!!x.dead;let k=kb(u);
+if(dd&&hit&&u>1.5)k=[7.8,0,12.57+1.57*Math.min(1,(u-1.5)/.3)];
+const at=x?ATK(u):0,sq=!x?0:u<.35?u/.35:u<.55?1-(u-.35)/.2:0;
+bhP.position.set(AX-3+(mh?at:0)-(hit?k[0]:0),1.6+(hit?k[1]:0)+Math.sin(t*2)*.05,AZ);bhP.rotation.z=hit?k[2]:0;bhP.scale.set(1+(mh?.12*sq:0),1-(mh?.12*sq:0),1);
+let ms=1;if(dd&&mh&&u>1.1)ms=Math.max(0,1-(u-1.1)/.5);
+bmP.position.set(AX+3-(hit?at:0)+(mh?k[0]:0),1.8+Math.abs(Math.sin(t*3))*.3+(mh?k[1]:0),AZ);bmP.rotation.z=mh?-k[2]:0;bmP.scale.set((1+(hit?.2*sq:0))*ms,(1-(hit?.25*sq:0))*ms,ms);bmP.visible=ms>0;
+const fl=u>=.5&&u<.8,e=(u-.5)/.3,col=mh?0xfb923c:0xa855f7,bp=ee=>[mh?AX-3+6*ee:AX+3-6*ee,2+Math.sin(Math.PI*ee)*.7];
+ball.visible=fl;if(fl){ball.material.color.setHex(col);const p=bp(e);ball.position.set(p[0],p[1],AZ);ball.rotation.x=t*20}
+trail.forEach((m,i)=>{const ee=Math.max(0,e-(i+1)*.09);m.visible=fl&&ee>0;if(m.visible){const p=bp(ee);m.position.set(p[0],p[1],AZ);m.material.color.setHex(col);m.scale.setScalar(.8-i*.12)}});
+const bu=u>=.8&&u<1.3,be=(u-.8)/.5,ix=hit?AX-3:AX+3;
+burst.forEach((m,i)=>{m.visible=bu;if(bu){const a=i/burst.length*6.28;m.position.set(ix+Math.cos(a)*be*2.4,2+Math.sin(a)*be*2.4,AZ+.5);m.scale.setScalar(Math.max(.05,1-be));m.material.color.setHex(col)}});
+bm.scale.setScalar(F&&F.mm ? .55+.45*Math.max(F.mh,0)/F.mm : 1);
+const sk=x&&u>=.8&&u<1.15?Math.sin(t*80)*.18*(1-(u-.8)/.35):0;cam.position.set(AX+sk,3.8+sk*.5,AZ+11);cam.lookAt(AX,1.9,AZ);cam.updateMatrixWorld();
+if(x&&x.d!=null&&u>=.8&&u<2){const v=new THREE.Vector3(hit?AX-3:AX+3,3.6+(u-.8)*1.2,AZ).project(cam);dmg.style.display="block";dmg.style.left=(v.x+1)/2*cvE.clientWidth+"px";dmg.style.top=(1-v.y)/2*cvE.clientHeight+"px";dmg.style.opacity=Math.min(1,(2-u)/.6);dmg.textContent="-"+x.d;dmg.style.color=hit?"#ff4d6d":"#ffd23f"}else dmg.style.display="none"}
+else{cam.position.set(hero.position.x*.6,6.5,hero.position.z+11);cam.lookAt(hero.position.x*.6,2,hero.position.z-6)}
+R.render(sc,cam)})();
+const f=n=>n<2?1:n*f(n-1),C=(n,r)=>f(n)/(f(r)*f(n-r)),Pm=(n,r)=>f(n)/f(n-r),rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const Dn=[1,0,1,2,9,44,265],pn=[1,1,2,3,5,7,11,15];
+function tree(a,b){let s='<svg viewBox="0 0 300 150" style="display:block;margin:6px auto;max-width:300px;max-height:150px;background:#fff7ee;border-radius:10px"><circle cx="30" cy="75" r="9" fill="#f59e0b"/>';for(let i=0;i<a;i++){const y=(i+.5)*150/a;s+=`<line x1="30" y1="75" x2="130" y2="${y}" stroke="#94a3b8"/><circle cx="130" cy="${y}" r="6" fill="#60a5fa"/>`;for(let j=0;j<b;j++){const y2=y+(j-(b-1)/2)*Math.min(10,130/(a*b));s+=`<line x1="130" y1="${y}" x2="230" y2="${y2}" stroke="#94a3b8"/><circle cx="230" cy="${y2}" r="3.5" fill="#22c55e"/>`}}return s+`<text x="150" y="146" font-size="12" text-anchor="middle" fill="#f59e0b">${a} × ${b} = ${a*b} paths</text></svg>`}
+const SV="display:block;margin:6px auto;max-width:300px;max-height:150px;background:#fff7ee;border-radius:10px";
+const venn=(a,b,c)=>`<svg viewBox="0 0 300 130" style="${SV}"><circle cx="115" cy="68" r="50" fill="#60a5fa" fill-opacity=".5"/><circle cx="185" cy="68" r="50" fill="#f472b6" fill-opacity=".5"/><g font-size="16" fill="#3a1d3f" text-anchor="middle"><text x="90" y="73">${a-c}</text><text x="150" y="73">${c}</text><text x="210" y="73">${b-c}</text></g><g font-size="12" fill="#3a1d3f"><text x="60" y="14">Python ${a}</text><text x="190" y="14">Java ${b}</text></g></svg>`;
+function boxes(h){let s="";for(let i=0;i<=h;i++)s+=`<circle cx="${20+i*(260/h)}" cy="28" r="7" fill="${i==h?"#e11d48":"#f59e0b"}"/>`;for(let i=0;i<h;i++)s+=`<rect x="${10+i*(280/h)}" y="64" width="${280/h-8}" height="38" rx="6" fill="none" stroke="#8b5cf6" stroke-width="2"/>`;return `<svg viewBox="0 0 300 130" style="${SV}">${s}<text x="150" y="124" text-anchor="middle" font-size="11" fill="#3a1d3f">${h+1} socks, ${h} colour-boxes: one box gets 2</text></svg>`}
+const pasc=n=>`<div class="cd" style="text-align:center;margin-top:6px">Row ${n}: <b>${[...Array(n+1)].map((_,k)=>C(n,k)).join(" · ")}</b></div>`;
+const qhint=q=>{const e=q[4];const p=(e.includes(":")?e.split(":")[0]:e.split(/[=,]/)[0]).trim().replace(/\.$/,"");return p.length>5?p:""};
+const LS=[
+{g:"Soch, tere paas 3 shirts aur 2 pants hain. Kitne alag outfits ban sakte hain? Yehi counting ki shuruaat hai!",c:"<b>Multiplication rule:</b> kaam ek ke baad ek (AND) ho to choices multiply hoti hain: m × n.<br><b>Addition rule:</b> ya to ye ya wo (OR), saath nahi, to choices add: m + n.<br>Pehle stages likho, phir har stage ki choices.",t:"AND → ×, OR → +",m:"Dono rules mix kar dena. Poocho: kya dono kaam karne hain (×) ya sirf ek (+)?",h:"AND → multiply, OR → add."},
+{g:"Soch, 4 dost line me khade hone hain. Kaun pehle, kaun baad me, order se farak padta hai!",c:"<b>Order matters</b> to permutation. n alag cheezein: <b>n!</b> tareeke.<br>Repeat wale letters ho to bhaag do: <b>n!/(a!·b!…)</b>.<br>n me se r chunke line me: <b>P(n,r) = n!/(n−r)!</b>",t:"Line, rank, PIN → permutation.",m:"Repeat wale letters pe divide karna bhool jana.",h:"Order matters? n! ya P(n,r). Repeats? Factorials se divide."},
+{g:"Soch, 10 students me se 3 ki team banani hai. Kaun chuna gaya wahi matter karta hai, order nahi!",c:"<b>Order matter nahi</b> karta to combination: <b>C(n,r) = n!/(r!(n−r)!)</b>.<br>Symmetry: <b>C(n,r) = C(n,n−r)</b>.<br>Permutation = Combination × r!",t:"Team, committee, hand → combination.",m:"Order wale sawal me C laga dena (ya ulta).",h:"Order nahi → C(n,r). Bade r pe C(n,n−r) se easy."},
+{g:"Soch, (x+y) ko khud se kai baar multiply karna hai. Coefficients ka pattern Pascal ne dhoond liya tha!",c:"<b>(x+y)ⁿ</b> me n+1 terms; xᵏyⁿ⁻ᵏ ka coefficient <b>C(n,k)</b>.<br><b>Pascal rule:</b> C(n,k)+C(n,k+1) = C(n+1,k+1).<br>Row n ka sum = <b>2ⁿ</b>.",t:"Row sum = 2ⁿ, rows symmetric.",m:"Terms n samajh lena (sahi: n+1 terms).",h:"Coefficient = C(n,k); row sum = 2ⁿ."},
+{g:"Soch, 13 log aur sirf 12 mahine. Kam se kam do ka birthday-month same hoga, guarantee!",c:"<b>Basic:</b> n+1 kabootar, n khaane → kisi me ≥ 2.<br><b>Generalized:</b> m cheezein, n khaane → kisi me kam se kam <b>⌈m/n⌉</b>.<br>Hashing: keys > slots → collision pakka.",t:"Khaane (holes) pehle pehchano.",m:"Ceiling ki jagah floor le lena.",h:"Holes kaun hain? Phir ⌈m/n⌉ lagao."},
+{g:"Soch, Python wale 30 aur Java wale 20, par kuch dono me hain. Seedha add karoge to double count hoga!",c:"<b>|A∪B| = |A|+|B|−|A∩B|</b>.<br>3 sets: singles add, pairs subtract, triple add.<br>Divisibility: ⌊N/a⌋+⌊N/b⌋−⌊N/lcm⌋.",t:"Overlap ek hi baar ginna hai.",m:"Intersection minus karna bhool jana.",h:"Add karo, overlap minus karo."},
+{g:"Soch, 4 letters 4 envelopes me random daale. Koi bhi sahi envelope me na jaye, kitne tareeke?",c:"<b>Derangement</b> = koi bhi apni original jagah pe nahi.<br><b>D(n) = (n−1)(D(n−1)+D(n−2))</b>, D1=0, D2=1.<br>D3=2, D4=9, D5=44, D6=265.",t:"D(n) ≈ n!/e.",m:"D(n) ko n! − 1 samajh lena.",h:"D(n) = (n−1)(D(n−1)+D(n−2))."},
+{g:"Soch, donut shop me 3 flavours hain aur tujhe 4 donuts lene hain, repeat allowed. Kitne combos?",c:"r cheezein, n types, <b>repetition allowed</b>: <b>C(r+n−1, r)</b> (stars and bars).<br>Ye x₁+…+xₙ = r ke non-negative solutions ke barabar hai.",t:"r stars aur n−1 bars.",m:"C(n,r) laga dena (repeat bhool ke).",h:"C(r+n−1, r) lagao."},
+{g:"Soch, 5 chocolates ko groups me baantna hai. Order matter karta hai ya nahi, yehi sab farak dalta hai!",c:"<b>Partition:</b> n ko unordered parts me todna (p(4)=5).<br><b>Composition:</b> ordered parts; n ki <b>2ⁿ⁻¹</b> compositions.<br>Exactly k parts ki compositions: C(n−1, k−1).",t:"Order matter → composition.",m:"Partition aur composition ko mix kar dena.",h:"Ordered? 2ⁿ⁻¹. Unordered? List karo."},
+{g:"Soch, har step ka kaam pichle steps pe depend karta hai, jaise Tower of Hanoi. Yehi recurrence hai!",c:"<b>Linear recurrence:</b> characteristic equation solve karo.<br>Hanoi: T(n) = 2T(n−1)+1 → <b>2ⁿ−1</b>.<br>Merge sort: T(n) = 2T(n/2)+n → <b>O(n log n)</b>.",t:"Base case zaroor likho.",m:"Initial conditions bhool jana.",h:"Characteristic equation banao, roots nikalo."},
+{g:"Soch, ek poori sequence ko ek hi formula me pack kar do. Ye generating function ka jaadu hai!",c:"Sequence aₙ ↔ <b>Σ aₙxⁿ</b>.<br>1,1,1,… ↔ <b>1/(1−x)</b>; cⁿ ↔ <b>1/(1−cx)</b>.<br>(1+x)ⁿ me xᵏ ka coefficient C(n,k).",t:"Coefficient nikalna = counting.",m:"1/(1−x) aur 1/(1+x) ko mix kar dena.",h:"Pehchano: 1/(1−cx) ya (1+x)ⁿ."}];
+const E=[
+[()=>{const a=rnd(2,5),b=rnd(2,6);return[`There are ${a} shirts and ${b} pants. In how many ways can we pick one of each?`,"Multiplication rule: m × n",`${a} × ${b} = ${a*b}`,a*b,"Independent stages → multiply.",tree(a,b),[a+b,a*b+a,a*b-b]]},
+()=>{const n=rnd(3,5);return[`How many ${n}-digit numbers (leading digit non-zero) have all digits distinct?`,`9 choices for the first digit, then P(9, ${n-1})`,`9 × ${Pm(9,n-1)} = ${9*Pm(9,n-1)}`,9*Pm(9,n-1),"First digit cannot be 0; the rest may include 0."]}],
+[()=>{const n=rnd(4,6);return[`In how many ways can ${n} different books be arranged on a shelf?`,"Permutation of n distinct objects: n!",`${n}! = ${f(n)}`,f(n),"All objects distinct, order matters.",undefined,[f(n)/2,f(n-1),n*n]]},
+()=>{const w=[["LEVEL","5!/(2!·2!)",30],["BANANA","6!/(3!·2!)",60],["APPLE","5!/2!",60],["MISSISSIPPI","11!/(4!·4!·2!)",34650]][rnd(0,3)];return[`How many distinct arrangements of the letters of ${w[0]}?`,"Permutation with repetition: n!/(a!·b!…)",`${w[1]} = ${w[2]}`,w[2],"Divide by factorials of repeated letters."]}],
+[()=>{const n=rnd(5,10),r=rnd(2,3);return[`In how many ways can a team of ${r} be chosen from ${n} students?`,"Combination: C(n,r) = n!/(r!(n−r)!)",`C(${n},${r}) = ${C(n,r)}`,C(n,r),"Order does not matter.",undefined,[Pm(n,r),C(n,r)+n,C(n,r+1)]]},
+()=>{const n=rnd(6,9);return[`From ${n} people, find the ways to form a 2-person committee, and the ways to choose a president and a secretary.`,"Committee: C(n,2). Offices: P(n,2) = 2 × C(n,2)",`C = ${C(n,2)}, P = ${Pm(n,2)}`,C(n,2)+" and "+Pm(n,2),"Offices have order, committees do not.",undefined,[Pm(n,2)+" and "+C(n,2),C(n,2)+" and "+C(n,2),Pm(n,2)+" and "+Pm(n,2)]]}],
+[()=>{const n=rnd(4,8),k=rnd(1,n-1);return[`Find the coefficient of x^${k}·y^${n-k} in (x + y)^${n}.`,"Binomial theorem: coefficient = C(n,k)",`C(${n},${k}) = ${C(n,k)}`,C(n,k),"Terms of (x+y)ⁿ follow row n of Pascal's triangle."]},
+()=>{const n=rnd(4,9);return[`What is the sum of all entries in row ${n} of Pascal's triangle (row 0 = 1)?`,"Row n sums to 2ⁿ",`2^${n} = ${2**n}`,2**n,"Put x = y = 1 in (x+y)ⁿ.",pasc(n)]}],
+[()=>{const h=rnd(3,8);return[`Socks come in ${h} colours. Minimum number to pick to guarantee a matching pair?`,"Pigeonhole: n+1 objects in n holes",`${h} + 1 = ${h+1}`,h+1,"Colours are the holes.",boxes(h),[h,h*2,h-1]]},
+()=>{const m=rnd(20,60),n=rnd(5,12);return[`${m} students and ${n} birth months. At least how many share a month?`,"Generalized pigeonhole: ⌈m/n⌉",`⌈${m}/${n}⌉ = ${Math.ceil(m/n)}`,Math.ceil(m/n),"Round UP, never down.",undefined,[Math.floor(m/n),Math.ceil(m/n)+1,Math.floor(m/n)-1]]}],
+[()=>{const a=rnd(15,30),b=rnd(10,25),c=rnd(3,9);return[`${a} students like Python, ${b} like Java, ${c} like both. How many like at least one?`,"|A∪B| = |A| + |B| − |A∩B|",`${a} + ${b} − ${c} = ${a+b-c}`,a+b-c,"The overlap was counted twice.",venn(a,b,c),[a+b,a+b+c,a+b-2*c]]},
+()=>{const N=rnd(5,12)*10,a=Math.floor(N/2),b=Math.floor(N/3),c=Math.floor(N/6);return[`How many integers from 1 to ${N} are divisible by 2 or 3?`,"|A∪B| = ⌊N/2⌋ + ⌊N/3⌋ − ⌊N/6⌋",`${a} + ${b} − ${c} = ${a+b-c}`,a+b-c,"Numbers divisible by both are multiples of 6."]}],
+[()=>{const n=rnd(3,6);return[`${n} letters are put into ${n} addressed envelopes. In how many ways does no letter reach its own envelope?`,"Derangement: D(n) = (n−1)(D(n−1) + D(n−2))",`D(${n}) = ${n-1} × (${Dn[n-1]} + ${Dn[n-2]}) = ${Dn[n]}`,Dn[n],"Nothing stays in its original place."]},
+()=>{const n=rnd(4,6);return[`${n} people leave hats at a party and get them back at random. Probability that nobody gets their own hat?`,"P = D(n) / n!",`${Dn[n]} / ${f(n)}`,Dn[n]+"/"+f(n),"For large n the probability is about 1/e ≈ 0.37.",undefined,[Dn[n-1]+"/"+f(n),Dn[n]+"/"+f(n-1),(f(n)-Dn[n])+"/"+f(n)]]}],
+[()=>{const r=rnd(3,6),n=rnd(2,4);return[`Choose ${r} donuts from ${n} flavours (repeats allowed). How many selections?`,"Multisets: C(r + n − 1, r)",`C(${r+n-1},${r}) = ${C(r+n-1,r)}`,C(r+n-1,r),"Stars and bars."]},
+()=>{const n=rnd(3,4),r=rnd(6,10);return[`How many non-negative integer solutions does x₁ + … + x${n} = ${r} have?`,"Stars and bars: C(r + n − 1, n − 1)",`C(${r+n-1},${n-1}) = ${C(r+n-1,n-1)}`,C(r+n-1,n-1),"r stars and n−1 bars."]}],
+[()=>{const n=rnd(4,6);return[`How many compositions (ordered partitions) does the integer ${n} have?`,"Compositions of n: 2^(n−1)",`2^${n-1} = ${2**(n-1)}`,2**(n-1),"Each gap between 1s is a cut or not."]},
+()=>{const n=rnd(3,7);return[`How many partitions does the integer ${n} have?`,"Partitions: unordered parts, listed systematically",`p(${n}) = ${pn[n]}`,pn[n],"Order of parts does not matter."]}],
+[()=>{const n=rnd(3,6);return[`Tower of Hanoi: T(n) = 2T(n−1) + 1, T(1) = 1. Find T(${n}).`,"Solve: T(n) = 2ⁿ − 1",`2^${n} − 1 = ${2**n-1}`,2**n-1,"Check with T(2) = 3."]},
+()=>{const n=rnd(6,10);let a=[0,1];for(let i=2;i<=n;i++)a.push(a[i-1]+a[i-2]);return[`Fibonacci: a₀=0, a₁=1, aₙ = aₙ₋₁ + aₙ₋₂. Find a${n}.`,"Apply the recurrence step by step",a.join(", "),a[n],"Each term is the sum of the previous two."]}],
+[()=>{const n=rnd(4,7),k=rnd(2,3);return[`Find the coefficient of x^${k} in (1 + x)^${n}.`,"Generating function: (1+x)ⁿ = Σ C(n,k)xᵏ",`C(${n},${k}) = ${C(n,k)}`,C(n,k),"Coefficient extraction is counting."]},
+()=>{const c=rnd(2,5);return[`Find the generating function of the sequence aₙ = ${c}ⁿ.`,"Σ (cx)ⁿ = 1/(1 − cx)",`1/(1 − ${c}x)`,`1/(1−${c}x)`,"Geometric series in cx.",undefined,["1/(1−x)",`1/(1+${c}x)`,`${c}/(1−x)`]]}]];
+
+const W=["BANANA","LEVEL","APPLE","BALLOON","COMMITTEE","STATISTICS","PEPPER","TOOTH","MATHEMATICS","ANAGRAM","SUCCESS","BOOKKEEPER","MISSISSIPPI","TATTOO"];
+const pw=w=>{const c={};[...w].forEach(x=>c[x]=(c[x]||0)+1);const v=Object.values(c).filter(x=>x>1);return[f(w.length)/v.reduce((a,x)=>a*f(x),1),`${w.length}!/(${v.map(x=>x+"!").join("·")})`]},PI=a=>a[rnd(0,a.length-1)];
+E[0].push(
+()=>{const n=rnd(3,6);return[`A PIN has ${n} digits (0–9) and digits may repeat. How many PINs exist?`,"Independent choices multiply: 10 choices per digit",`10^${n} = ${10**n}`,10**n,"Each digit is a stage.",undefined,[10*n,Pm(10,n),9*10**(n-1)]]},
+()=>{const a=rnd(3,12),b=rnd(3,12);return[`Choose ONE project from ${a} AI projects OR ${b} web projects (none overlap). How many choices?`,"Addition rule: m + n",`${a} + ${b} = ${a+b}`,a+b,"OR → add.",undefined,[a*b,a+b+1,a+b-1]]},
+()=>{const a=rnd(2,5),b=rnd(2,5),c=rnd(2,4);return[`A menu has ${a} starters, ${b} mains and ${c} desserts. How many 3-course meals are possible?`,"Multiplication rule: m × n × p",`${a} × ${b} × ${c} = ${a*b*c}`,a*b*c,"Three stages → three factors.",undefined,[a+b+c,a*b+c,a*b*c-a]]},
+()=>{const a=rnd(2,5),b=rnd(2,5),c=rnd(2,5);return[`A→B has ${a} direct roads; also ${b} roads A→C and ${c} roads C→B. How many ways from A to B?`,"Add the alternatives, multiply the stages",`${a} + ${b}×${c} = ${a+b*c}`,a+b*c,"Direct OR (A→C AND C→B).",undefined,[(a+b)*c,a*b*c,a+b+c]]});
+E[1].push(
+()=>{const n=rnd(5,9);return[`${n} runners finish a race with no ties. In how many ways can gold, silver and bronze be awarded?`,"Ordered selection: P(n,3)",`${n}×${n-1}×${n-2} = ${Pm(n,3)}`,Pm(n,3),"Medals are ranked, so order matters.",undefined,[C(n,3),n**3,f(n)]]},
+()=>{const w=PI(["MATH","CODE","PYTHON","LOGIC","NUMBER"]),n=w.length;return[`How many ways can the letters of the word ${w} be arranged?`,"All letters distinct: n!",`${n}! = ${f(n)}`,f(n),"No repeated letters.",undefined,[f(n)/2,f(n-1),n*n]]},
+()=>{const w=PI(W),p=pw(w);return[`How many distinct arrangements are there of the letters of ${w}?`,"With repetition: n!/(a!·b!…)",`${p[1]} = ${p[0]}`,p[0],"Divide by factorials of repeated letters.",undefined,[f(w.length),p[0]*2,p[0]/2]]},
+()=>{const n=rnd(3,5);return[`How many ${n}-digit PINs use all different digits (0–9)?`,"P(10, n) = 10·9·8…",`P(10,${n}) = ${Pm(10,n)}`,Pm(10,n),"No digit repeats.",undefined,[10**n,C(10,n),Pm(10,n)/n]]});
+E[2].push(
+()=>{const n=rnd(6,12),r=rnd(2,4);return[`In how many ways can ${r} toppings be chosen from ${n} available toppings?`,"Combination: C(n,r)",`C(${n},${r}) = ${C(n,r)}`,C(n,r),"Order of toppings does not matter.",undefined,[Pm(n,r),C(n,r)*2,C(n,r+1)]]},
+()=>{const n=rnd(8,15),r=rnd(2,3);return[`If C(${n},${r}) = C(${n},k) with k ≠ ${r}, find k.`,"Symmetry identity: C(n,r) = C(n,n−r)",`k = ${n} − ${r} = ${n-r}`,n-r,"Choosing r to take = choosing n−r to leave.",undefined,[r+1,n,n-r+1]]},
+()=>{const n=rnd(5,12);return[`${n} people each shake hands exactly once with every other person. How many handshakes?`,"Pairs: C(n,2)",`C(${n},2) = ${C(n,2)}`,C(n,2),"A handshake is an unordered pair.",undefined,[n*n,Pm(n,2),n*(n+1)/2]]},
+()=>{const n=rnd(6,10),r=rnd(2,3);return[`A lottery draws ${r} winning numbers from ${n}. How many different draws are possible?`,"Combination: C(n,r)",`C(${n},${r}) = ${C(n,r)}`,C(n,r),"Winning numbers are an unordered set.",undefined,[Pm(n,r),n*r,C(n,r)+n]]});
+E[3].push(
+()=>{const n=rnd(5,20);return[`How many terms does the expansion of (x + y)^${n} have?`,"(x+y)ⁿ has n + 1 terms",`${n} + 1 = ${n+1}`,n+1,"Powers of x go from n down to 0.",undefined,[n,n+2,2*n]]},
+()=>{const n=rnd(4,9),k=rnd(1,n-2);return[`Using Pascal's rule, C(${n},${k}) + C(${n},${k+1}) equals:`,"Pascal's rule: C(n,k)+C(n,k+1) = C(n+1,k+1)",`C(${n+1},${k+1}) = ${C(n+1,k+1)}`,C(n+1,k+1),"Add two neighbours in a row to get the entry below.",undefined,[C(n+1,k),C(n,k+1)*2,C(n+2,k+1)]]},
+()=>{const n=rnd(4,10);return[`How many subsets does a set with ${n} elements have?`,"Σ C(n,k) = 2ⁿ",`2^${n} = ${2**n}`,2**n,"Each element is in or out.",undefined,[n*n,2*n,2**n-1]]},
+()=>{const n=rnd(5,10),k=rnd(2,n-2);return[`What is the entry in row ${n}, position ${k} of Pascal's triangle (both counted from 0)?`,"Entry = C(n,k)",`C(${n},${k}) = ${C(n,k)}`,C(n,k),"Row 0 is just 1.",undefined,[C(n,k-1)+C(n,k+1),C(n-1,k),C(n+1,k)]]});
+E[4].push(
+()=>{const m=rnd(30,200),n=rnd(7,20);return[`${m} keys are hashed into ${n} buckets. The fullest bucket holds at least how many keys?`,"Generalized pigeonhole: ⌈m/n⌉",`⌈${m}/${n}⌉ = ${Math.ceil(m/n)}`,Math.ceil(m/n),"Hash collisions are pigeonholes.",undefined,[Math.floor(m/n),Math.ceil(m/n)+1,n]]},
+()=>{const n=rnd(4,12);return[`Minimum number of integers to pick to guarantee two with the same remainder when divided by ${n}?`,"Remainders are the holes: n holes → n + 1 objects",`${n} + 1 = ${n+1}`,n+1,"There are exactly n possible remainders.",undefined,[n,2*n,n-1]]},
+()=>{const k=rnd(3,5);return[`Minimum cards from a standard deck to guarantee ${k} cards of the same suit?`,"Generalized pigeonhole with 4 suits: 4(k−1)+1",`4×${k-1}+1 = ${4*(k-1)+1}`,4*(k-1)+1,"Worst case: k−1 of each suit first.",undefined,[4*k,4*k+2,k+4]]});
+E[5].push(
+()=>{const a=rnd(20,30),b=rnd(20,30),c=rnd(20,30),x=rnd(5,10),y=rnd(5,10),z=rnd(5,10),w=rnd(1,4),r=a+b+c-x-y-z+w;return[`|A|=${a}, |B|=${b}, |C|=${c}, |A∩B|=${x}, |A∩C|=${y}, |B∩C|=${z}, |A∩B∩C|=${w}. Find |A∪B∪C|.`,"Three sets: singles − pairs + triple",`${a}+${b}+${c} − ${x} − ${y} − ${z} + ${w} = ${r}`,r,"Add back the triple overlap.",undefined,[a+b+c-x-y-z,a+b+c-x-y-z-w,a+b+c]]},
+()=>{const N=rnd(5,20)*10,a=Math.floor(N/3),b=Math.floor(N/5),c=Math.floor(N/15);return[`How many integers from 1 to ${N} are divisible by 3 or 5?`,"|A∪B| = ⌊N/3⌋ + ⌊N/5⌋ − ⌊N/15⌋",`${a} + ${b} − ${c} = ${a+b-c}`,a+b-c,"Multiples of both are multiples of 15.",undefined,[a+b,a+b+c,a+b-2*c]]},
+()=>{const n=rnd(55,70),a=rnd(15,25),b=rnd(15,25),c=rnd(4,10),r=n-(a+b-c);return[`Of ${n} students, ${a} like tea, ${b} like coffee and ${c} like both. How many like neither?`,"Neither = total − |A∪B|",`${n} − (${a}+${b}−${c}) = ${r}`,r,"Find the union first.",undefined,[n-a-b,a+b-c,n-(a+b)+2*c]]});
+E[6].push(
+()=>{const n=rnd(3,6);return[`${n} students swap exam papers so that nobody gets their own. In how many ways can this happen?`,"Derangement: D(n) = (n−1)(D(n−1)+D(n−2))",`D(${n}) = ${Dn[n]}`,Dn[n],"No fixed points allowed.",undefined,[f(n)-1,Dn[n-1],Dn[n]+n]]},
+()=>{const n=rnd(3,6);return[`Given D(${n-1}) = ${Dn[n-1]} and D(${n-2}) = ${Dn[n-2]}, find D(${n}).`,"D(n) = (n−1)(D(n−1) + D(n−2))",`${n-1} × (${Dn[n-1]} + ${Dn[n-2]}) = ${Dn[n]}`,Dn[n],"Use the recurrence directly.",undefined,[Dn[n-1]+Dn[n-2],n*(Dn[n-1]+Dn[n-2]),(n-1)*Dn[n-1]]]},
+()=>{const n=rnd(4,6),k=rnd(1,2);return[`How many permutations of ${n} objects have exactly ${k} fixed point${k>1?"s":""}?`,"Choose the fixed ones, derange the rest: C(n,k)·D(n−k)",`C(${n},${k}) × D(${n-k}) = ${C(n,k)} × ${Dn[n-k]} = ${C(n,k)*Dn[n-k]}`,C(n,k)*Dn[n-k],"The remaining objects must all move.",undefined,[Dn[n-k],C(n,k),Dn[n]]]});
+E[7].push(
+()=>{const n=rnd(3,5),r=rnd(4,10);return[`In how many ways can ${r} identical balls be placed into ${n} distinct boxes?`,"Stars and bars: C(r + n − 1, n − 1)",`C(${r+n-1},${n-1}) = ${C(r+n-1,n-1)}`,C(r+n-1,n-1),"Repetition allowed, balls identical.",undefined,[n**r,C(r+n-1,r+1),C(r+n,n-1)]]},
+()=>{const n=rnd(3,5),r=rnd(3,6);return[`How many multisets of size ${r} can be formed from ${n} different elements?`,"Multisets: C(n + r − 1, r)",`C(${n+r-1},${r}) = ${C(n+r-1,r)}`,C(n+r-1,r),"Elements may repeat.",undefined,[C(n,r)+n,n**r,Pm(n+r-1,r)]]},
+()=>{const n=rnd(3,4),r=rnd(8,12);return[`How many positive integer solutions does x₁ + … + x${n} = ${r} have?`,"Each xᵢ ≥ 1: C(r − 1, n − 1)",`C(${r-1},${n-1}) = ${C(r-1,n-1)}`,C(r-1,n-1),"Give each variable 1 first.",undefined,[C(r+n-1,n-1),C(r,n-1),C(r-1,n)]]},
+()=>{const n=rnd(3,6),r=rnd(3,6);return[`An ice-cream shop has ${n} flavours. How many ways can you order ${r} scoops (repeats allowed, order ignored)?`,"Multisets: C(n + r − 1, r)",`C(${n+r-1},${r}) = ${C(n+r-1,r)}`,C(n+r-1,r),"Order of scoops is ignored.",undefined,[n**r,C(n,r)+1,Pm(n,r)]]});
+E[8].push(
+()=>{const n=rnd(6,12),k=rnd(2,4);return[`How many compositions of ${n} have exactly ${k} parts?`,"Compositions into k parts: C(n − 1, k − 1)",`C(${n-1},${k-1}) = ${C(n-1,k-1)}`,C(n-1,k-1),"Choose k−1 cut points among n−1 gaps.",undefined,[C(n,k),C(n-1,k),2**(n-1)]]},
+()=>{const n=rnd(4,9);return[`How many compositions does the integer ${n} have?`,"Compositions of n: 2^(n−1)",`2^${n-1} = ${2**(n-1)}`,2**(n-1),"Each of the n−1 gaps is cut or not.",undefined,[2**n,n*n,2**(n-2)]]},
+()=>{const n=rnd(5,14);return[`In how many ways can ${n} be written as a sum of 1s and 2s (order ignored)?`,"Number of 2s can be 0 to ⌊n/2⌋",`⌊${n}/2⌋ + 1 = ${Math.floor(n/2)+1}`,Math.floor(n/2)+1,"Count how many 2s you use.",undefined,[Math.floor(n/2),n,Math.floor(n/2)+2]]},
+()=>{const n=rnd(6,15);return[`How many partitions of ${n} into exactly 2 positive parts exist (order ignored)?`,"Parts (a, n−a) with a ≤ n−a: ⌊n/2⌋",`⌊${n}/2⌋ = ${Math.floor(n/2)}`,Math.floor(n/2),"3+4 and 4+3 are the same partition.",undefined,[n-1,Math.floor(n/2)+1,Math.ceil(n/2)+1]]});
+E[9].push(
+()=>{const c=rnd(1,5),k=rnd(3,6);return[`aₙ = 2aₙ₋₁ with a₀ = ${c}. Find a${k}.`,"Doubling each step: aₙ = a₀·2ⁿ",`${c} × 2^${k} = ${c*2**k}`,c*2**k,"Geometric growth.",undefined,[c+2*k,c*k*2,c*2**(k-1)]]},
+()=>{const c=rnd(1,6),d=rnd(2,5),k=rnd(4,9);return[`aₙ = aₙ₋₁ + ${d} with a₀ = ${c}. Find a${k}.`,"Arithmetic growth: aₙ = a₀ + d·n",`${c} + ${d}×${k} = ${c+d*k}`,c+d*k,"Add d each step.",undefined,[c+d*(k-1),c*d*k,c+d*(k+1)]]},
+()=>{const r1=rnd(1,4),r2=rnd(r1+1,6);return[`Find the larger root of the characteristic equation of aₙ = ${r1+r2}aₙ₋₁ − ${r1*r2}aₙ₋₂.`,"Characteristic equation: r² − pr + q = 0",`r² − ${r1+r2}r + ${r1*r2} = 0 → roots ${r1}, ${r2}`,r2,"Factor the quadratic.",undefined,[r1,r1+r2,r1*r2]]},
+()=>{const t=PI([["T(n) = T(n/2) + 1","O(log n)","Halving each step","binary search",["O(n)","O(n log n)","O(1)"]],["T(n) = 2T(n/2) + n","O(n log n)","log n levels, n work each","merge sort",["O(n)","O(n²)","O(log n)"]],["T(n) = T(n−1) + 1","O(n)","n steps of constant work","a simple loop",["O(log n)","O(n log n)","O(n²)"]],["T(n) = T(n−1) + n","O(n²)","n + (n−1) + … + 1","insertion sort",["O(n)","O(n log n)","O(2ⁿ)"]],["T(n) = 2T(n−1) + 1","O(2ⁿ)","each step doubles","Tower of Hanoi",["O(n²)","O(n log n)","O(n)"]]]);return[`The running time of ${t[3]} satisfies ${t[0]}. What is its growth rate?`,"Solve the recurrence: "+t[2],t[1],t[1],"Unroll the recurrence.",undefined,t[4]]});
+E[10].push(
+()=>{const n=rnd(5,10),k=rnd(2,5);return[`Find the coefficient of x^${k} in (1 + x)^${n}.`,"(1+x)ⁿ = Σ C(n,k)xᵏ",`C(${n},${k}) = ${C(n,k)}`,C(n,k),"Extract the coefficient.",undefined,[C(n,k-1),C(n,k+1),n*k]]},
+()=>{const k=rnd(3,9);return[`Find the coefficient of x^${k} in 1/(1−x)².`,"1/(1−x)² = Σ (k+1)xᵏ",`k + 1 = ${k+1}`,k+1,"Differentiate 1/(1−x).",undefined,[k,k+2,k*k]]},
+()=>{const c=rnd(2,4),k=rnd(3,5);return[`Find the coefficient of x^${k} in 1/(1−${c}x).`,"1/(1−cx) = Σ cᵏxᵏ",`${c}^${k} = ${c**k}`,c**k,"Geometric series.",undefined,[c*k,k**c,c**(k-1)]]},
+()=>{const s=rnd(3,11),w=s<=7?s-1:13-s;return[`Two fair dice are rolled. In how many ways can the sum be ${s}?`,"Coefficient of x^s in (x+x²+…+x⁶)²",`${w} ways`,w,"Count the pairs (a,b) with a+b = s.",undefined,[s,6,s+1]]});
+
+const RC=[],mixQs=n=>{const r=[],z=sh([...Array(Z.length).keys()]);for(let k=0;k<n;k++)r.push(getQ(z[k%z.length]));return r};
+function opts(a,w){const u=new Set([a]),d=[];for(const v of (w||[]).concat(sh([a+1,a-1,a*2,Math.round(a/2),a+rnd(2,6),a-rnd(2,6),a+10,a*3,a+rnd(7,20)]))){if(v>0&&Number.isInteger(v)&&!u.has(v)){u.add(v);d.push(v);if(d.length==3)break}}let x=a;while(d.length<3){x+=rnd(1,5);if(!u.has(x)){u.add(x);d.push(x)}}return sh([a,...d])}
+function mcq(i){const g=PI(E[i])(),a=g[3];let o=typeof a=="number"?opts(a,g[6]):[a,...(g[6]||[])];o=[...new Set(o.map(String))];if(o.length<4)return null;o=sh(o.slice(0,4).includes(String(a))?o.slice(0,4):[String(a),...o.slice(1,4)]);return[Z[i][2][0],g[0],o,o.indexOf(String(a)),g[1]+": "+g[2]+"."]}
+function getQ(i){let q;for(let t=0;t<30;t++){q=Math.random()<.85?mcq(i):null;if(!q)q=sh(Q.filter(x=>Z[i][2].includes(x[0])))[0];if(!RC.includes(q[1]))break}RC.push(q[1]);if(RC.length>80)RC.shift();return q}
+// ---------- UI / game ----------
+const hud=()=>{$("hud").innerHTML=`<span>🧑 ${esc(P.name||"hero")} · Lv ${lv()}</span><span>🪙 ${P.coins}</span><span>⭐ ${P.stars}</span>`};
+const refresh=()=>{hud();world()};
+function login(){let l=null;try{l=ld("nn_"+localStorage.getItem("nn_last"))}catch(e){}
+ui(`<h1>COMBIQUEST</h1><p class="mut" style="text-align:center">The Combinatorics RPG · FM Unit 1</p><div class="cd"><b>Hero registration</b><input id="nm" placeholder="Your name" value="${l?esc(l.name):""}"><input id="en" placeholder="Enrollment number" value="${l?esc(l.enr):""}"><button class="b g" onclick="enter()">▶ Enter the world</button><small>Your progress, level and rank are saved per student on this device.</small></div>`)}
+function enter(){const n=$("nm").value.trim(),e=$("en").value.trim();if(!n||!e)return msg("Enter your name and enrollment number");const id=(e+"_"+n).toLowerCase();P=ld("nn_"+id)||{id,name:n,enr:e,xp:0,coins:20,stars:0,cleared:[]};P.inv=P.inv||{pot:1,scr:1};P.chests=P.chests||[];P.acc=P.acc||{};P.mb=P.mb||{};sv();refresh();menu()}
+function menu(){bt=null;ui(`<h1>COMBIQUEST</h1><p class="mut" style="text-align:center">Count · Think · Unlock</p><button class="b g" onclick="home()">▶ PLAY SOLO (RPG)</button><button class="b" onclick="quests()">🗺 LEVEL SELECT &amp; STUDY</button><button class="b" onclick="quick()">⚡ 10-QUESTION QUEST</button><div class="gr" style="margin-top:8px"><button class="b m" onclick="friends()">👥 FRIENDS</button><button class="b m" onclick="arena()">🌐 ARENA</button><button class="b" onclick="dash()">📊 DASHBOARD</button><button class="b" onclick="board()">🏆 LEADERBOARD</button></div><button class="sm" onclick="how()">❓ How to play</button><button class="sm" onclick="login()">🔄 Switch hero</button>`)}
+function home(){bt=null;const q=cur(),L=lv(),pc=(P.xp-(L-1)*70)/70*100;
+ui(`<div class="cd"><b>${esc(P.name)}</b> · ${rk()} · Lv ${L}<div class="bar"><i style="width:${pc}%"></i></div><small>XP ${P.xp}/${L*70} · HP ${mhp()} · 🧪${P.inv.pot} ✂${P.inv.scr}</small></div><div class="cd"><b>📍 Current quest</b><p>${q<0?"All zones cleared! You are a Combinatorics Grandmaster 🎓":Z[q][1]+" teaches "+Z[q][0]+". Learn, then defeat the monster!"}</p>${q<0?"":`<button class="b g" onclick="goT(${q})">📍 Walk to teacher</button>`}</div><button class="sm" onclick="menu()">🏠 Menu</button><button class="sm" onclick="quests()">🗺 Levels</button><p><small>Tap ground to walk · teacher = learn · monster = fight · 🎁 chests = coins · gold-roof stall = Trader Multi</small></p>`)}
+function quests(){ui(`<h2>🗺 Level select</h2>`+Z.map((z,i)=>`<div class="cd rw ${unl(i)?"":"lk"}"><span>${done(i)?"✅":unl(i)?"🏝":"🔒"} ${i+1}. ${z[0]}</span>${unl(i)?`<button class="sm" onclick="goT(${i})">${done(i)?"Review":"Start"}</button>`:""}</div>`).join("")+`<button class="b" onclick="home()">Back</button>`)}
+function dash(){const a=P.acc||{},t=Object.values(a).reduce((x,v)=>[x[0]+v[0],x[1]+v[1]],[0,0]);
+ui(`<div class="cd"><h2>📊 ${esc(P.name)} · ${rk()}</h2><p>Enrollment: ${esc(P.enr||"")}<br>Level ${lv()} · XP ${P.xp} · 🪙 ${P.coins} · ⭐ ${P.stars}<br>Zones cleared: ${P.cleared.length}/${Z.length} · Arena wins: ${P.arena||0}<br>Overall accuracy: ${t[1]?Math.round(t[0]/t[1]*100):0}%</p></div><div class="cd"><b>Accuracy by topic</b>${Z.map((z,i)=>{const v=a[i]||[0,0],p=v[1]?Math.round(v[0]/v[1]*100):0;return `<small>${z[0]} · ${p}%</small><div class="bar"><i style="width:${p}%"></i></div>`}).join("")}<small>Short bars = topics to revise 📖</small></div><button class="b" onclick="menu()">Back</button>`)}
+function board(){const L=[];try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith("nn_")&&k!="nn_last"){const p=JSON.parse(localStorage.getItem(k));if(p&&p.name)L.push(p)}}}catch(e){}
+L.sort((a,b)=>b.xp-a.xp);ui(`<h2>🏆 Leaderboard</h2><small>Heroes registered on this device</small>`+(L.slice(0,10).map((p,i)=>`<div class="cd rw"><span>${["🥇","🥈","🥉"][i]||(i+1)+"."} ${esc(p.name)}</span><span>Lv ${1+Math.floor(p.xp/70)} · ⭐${p.stars} · ${p.xp} XP</span></div>`).join("")||"<p>No heroes yet.</p>")+`<button class="b" onclick="menu()">Back</button>`)}
+function how(){ui(`<div class="cd"><h2>❓ How to play</h2><p>1️⃣ Tap the ground to walk.<br>2️⃣ Tap a tower or teacher to learn a topic.<br>3️⃣ Tap the monster to fight. You and the monster both start with 30 HP; right answers hit it, wrong answers hurt you. If you lose, the monster comes back with 40 HP; if you win, your max HP grows.<br>4️⃣ Clear a zone to unlock the next one.<br>5️⃣ Open 🎁 chests for coins; buy 🧪 potions and ✂ 50/50s from Trader Multi (gold-roof stall).<br>6️⃣ Try the 10-Question Quest, Friends duel or the Arena for bonus XP.</p></div><button class="b" onclick="menu()">Back</button>`)}
+function shop(){ui(`<div class="cd"><h2>🛒 Trader Multi</h2><p>Your coins: 🪙 ${P.coins}</p><div class="cd rw"><span>🧪 Potion (+15 HP in a fight)<br><small>You have ${P.inv.pot}</small></span><button class="sm" onclick="buy('pot',15)">15🪙</button></div><div class="cd rw"><span>✂ 50/50 (hides 2 wrong answers)<br><small>You have ${P.inv.scr}</small></span><button class="sm" onclick="buy('scr',25)">25🪙</button></div><button class="b" onclick="home()">Back</button></div>`)}
+function buy(k,c){if(P.coins<c)return msg("Not enough coins!");P.coins-=c;P.inv[k]++;sv();hud();shop()}
+function pod(i){if(P.chests.includes(i))return msg("This chest is empty");P.chests.push(i);const c=10+Math.floor(Math.random()*16);P.coins+=c;let t="🪙 +"+c;if(Math.random()<.4){P.inv.pot++;t+=" · 🧪 potion"}sv();refresh();msg("🎁 Chest: "+t)}
+let LE;
+function study(i){bt=null;LE={i,p:0,e:[E[i][0](),E[i][1]()]};lp(0)}
+function lp(d){LE.p=Math.max(0,Math.min(4,LE.p+d));const i=LE.i,p=LE.p,t=LS[i],z=Z[i],bg='style="background:#f5e9da;color:#3a1d3f"';let b="";
+if(p==0)b=`<div class="cd" ${bg}>“Namaste, ${esc(P.name)}! Main hoon <b>${z[1]}</b>. ${t.g}”</div><div class="cd"><small>Aaj ka topic:</small> <b>${z[0]}</b></div>`;
+if(p==1)b=`<b>📖 Concept</b><div class="cd" style="margin-top:6px">${t.c}</div><div class="cd">🧠 Yaad rakho: ${t.t}</div>`;
+if(p==2||p==3){const e=LE.e[p-2];b=`<b>${p==2?"✍️ Worked example 1":"🎓 Worked example 2 (exam level)"}</b><div class="cd" style="margin-top:6px">${e[0]}</div>${e[5]||""}<div class="cd" ${bg}>📐 <b>Rule:</b> ${e[1]}<br>🧮 <b>Steps:</b> ${e[2]}<br>✅ <b>Answer:</b> ${e[3]}<br>💡 ${e[4]}</div><button class="b m" onclick="nex(${p-2})">🔄 New example</button>`}
+if(p==4)b=`<b>⚠️ Common mistake</b><div class="cd" style="margin-top:6px">${t.m}</div><div class="cd" ${bg}>“Ab tum taiyaar ho! Monster ko in rules se haraao.”</div>`;
+ui(`<div class="rw" style="padding:0"><b style="font-size:1.2rem">🧙 ${z[1]}</b><button class="sm" onclick="home()">✕</button></div><small>${z[0]} · page ${p+1}/5</small><div class="bar"><i style="width:${(p+1)*20}%;background:#f59e0b"></i></div>${b}<div class="rw" style="padding:0"><button class="sm" onclick="lp(-1)">← Back</button>${p<4?`<button class="sm" onclick="lp(1)">Next →</button>`:`<button class="sm" style="background:#16a34a" onclick="fight(${i})">⚔️ Fight!</button>`}</div>`)}
+function nex(k){let e,t=0;do{e=E[LE.i][k]()}while(e[0]===LE.e[k][0]&&t++<30);LE.e[k]=e;lp(0)}
+function fight(i){P.mb=P.mb||{};P.inv.pot=Math.max(1,P.inv.pot||0);P.inv.scr=Math.max(1,P.inv.scr||0);F={i,qs:[],mm:P.mb[i]||30,mh:P.mb[i]||30,hp:mhp(),mx:mhp()};bt={i};bmB.material.color.setHex(PAL[i]);nq()}
+function nq(){const q=getQ(F.i);F.qs=[q];F.o=sh(q[2].map((t,k)=>[t,k]));F.x=[];F.hint=0;F.lock=false;rn()}
+function rn(){const q=F.qs[0];
+ui(`<small id="mt">⚔️ ${Z[F.i][0]} Monster · HP ${F.mh}/${F.mm}</small><div class="bar r" id="mb"><i style="width:${F.mh/F.mm*100}%"></i></div><small id="ht">Your HP ${F.hp}/${F.mx}</small><div class="bar" id="hb"><i style="width:${F.hp/F.mx*100}%"></i></div><div class="cd"><b>${q[1]}</b>${F.hint?`<div class="ex">💡 <b>Hint:</b> ${qhint(q)}${qhint(q)?". ":""}${LS[F.i].h}</div>`:""}${F.o.map((x,k)=>F.x.includes(k)?"":`<button class="opt" data-k="${k}" onclick="ans(${k})"><b class="lt">${"ABCD"[k]}</b>${x[0]}</button>`).join("")}<div id="fb"></div></div><div class="fr"><button class="sm" onclick="scr()">✂ 50/50 ×${P.inv.scr}</button><button class="sm" onclick="pot()">🧪 ×${P.inv.pot}</button><button class="sm" style="background:#ec4899" onclick="hnt()">💡 Hint</button><button class="sm" style="background:#475569" onclick="home()">🏃 Flee</button></div>`)}
+function hnt(){if(F.lock)return msg("Tap Next first");F.hint=1;rn()}
+function pot(){if(F.lock)return msg("Tap Next first");if(!P.inv.pot)return msg("No potions left! Buy at Trader Multi");if(F.hp>=F.mx)return msg("Your HP is already full!");P.inv.pot--;F.hp=Math.min(F.mx,F.hp+15);sv();rn();msg("🧪 Potion used: HP restored")}
+function scr(){if(F.lock)return msg("Tap Next first");if(!P.inv.scr)return msg("No 50/50 left! Buy at Trader Multi");const q=F.qs[0],w=F.o.map((x,k)=>k).filter(k=>F.o[k][1]!==q[3]&&!F.x.includes(k));if(w.length<2)return msg("Already used on this question");P.inv.scr--;F.x=F.x.concat(sh(w).slice(0,2));sv();rn();msg("✂ 2 wrong options removed")}
+function bars(){$("mt").textContent="⚔️ "+Z[F.i][0]+" Monster · HP "+F.mh+"/"+F.mm;$("mb").innerHTML=`<i style="width:${F.mh/F.mm*100}%"></i>`;$("ht").textContent="Your HP "+F.hp+"/"+F.mx;$("hb").innerHTML=`<i style="width:${F.hp/F.mx*100}%"></i>`}
+function ans(k){if(F.lock)return;F.lock=true;const q=F.qs[0],ok=F.o[k][1]===q[3],bs=[...document.querySelectorAll(".opt")];F.last=q;
+bs.forEach(b=>{const j=+b.dataset.k;b.disabled=true;if(F.o[j][1]===q[3])b.classList.add("ok");else if(j!==k)b.classList.add("dim")});
+const a=P.acc[F.i]=P.acc[F.i]||[0,0];a[1]++;bt&&(bt.fx={w:ok?"m":"h",t0:clk.elapsedTime});
+const d=ok?rnd(8,12):rnd(6,10),z=LS[F.i];let h;if(bt)bt.fx.d=d;
+if(ok){a[0]++;F.mh-=d;P.xp+=10;P.coins+=5;h=`💥 <b>Critical hit! You hit the monster for ${d}</b><br>🧮 ${q[4]}`}
+else{bs.find(b=>+b.dataset.k===k).classList.add("bad");F.hp-=d;h=`💢 <b>Ouch! The monster hits you for ${d}</b><br>You chose <b>${F.o[k][0]}</b>; correct answer is <b>${F.o.find(o=>o[1]===q[3])[0]}</b>.<br>📐 <b>Rule:</b> ${z.h}<br>🧮 <b>Working:</b> ${q[4]}<br>⚠️ <b>Watch out:</b> ${z.m}`}
+F.qs.shift();F.mh=Math.max(F.mh,0);F.hp=Math.max(F.hp,0);if(bt)bt.fx.dead=F.hp<=0||F.mh<=0;const end=F.hp<=0||F.mh<=0;
+$("fb").innerHTML=`<div class="cd" style="background:#f5e9da;color:#3a1d3f">${h}</div><button class="b g" onclick="${F.hp<=0?"lose()":F.mh<=0?"win()":"nq()"}">${end?"See result →":"Next →"}</button>`;sv();hud();bars()}
+const BG='style="background:#f5e9da;color:#3a1d3f"',BTN=i=>`<button class="b g" onclick="fight(${i})">⚔️ Rematch</button><button class="b m" onclick="study(${i})">📘 Study this topic</button><button class="b" onclick="home()">🌍 Back to the village</button>`;
+function lose(){P.mb[F.i]=40;sv();ui(`<div class="cd" style="text-align:center"><b>💔 You fainted…</b></div><div class="cd" ${BG}>“Himmat mat haaro! Topic dobara padho aur wapas ladho.”<br><small style="color:#7a5a7a">The monster grew stronger: 40 HP next time.</small></div>${BTN(F.i)}`)}
+function win(){const i=F.i,L=lv(),first=!done(i);P.mb=P.mb||{};delete P.mb[i];
+if(first){P.hpb=(P.hpb||0)+5;P.cleared.push(i);P.stars++;P.xp+=20;P.coins+=20}else P.coins+=10;
+sv();refresh();ui(`<div class="cd" style="text-align:center"><b>🏆 Victory!</b></div><div class="cd" ${BG}>“Shabaash, ${esc(P.name)}! Tumne ${Z[i][0]} ka monster haraa diya.”<br><small style="color:#7a5a7a">${first?"+20 XP · +20 🪙 · +1 ⭐ · ❤️ Max HP grew to "+mhp()+(lv()>L?" · 🎉 Level up! "+rk():""):"Practice win · +10 🪙"}</small></div>${BTN(i)}`)}
+function ask(q,head,cb){const o=sh(q[2].map((t,k)=>[t,k]));K={q,o,cb,lock:0};ui(`<div class="cd">${head}</div><div class="cd"><b>${q[1]}</b>${o.map((x,k)=>`<button class="opt" onclick="pk(${k})"><b class="lt">${"ABCD"[k]}</b>${x[0]}</button>`).join("")}<div id="fb"></div></div>`)}
+function pk(k){if(K.lock)return;K.lock=1;const ok=K.o[k][1]===K.q[3],bs=[...document.querySelectorAll(".opt")];bs.forEach((b,j)=>{b.disabled=true;if(K.o[j][1]===K.q[3])b.classList.add("ok")});if(!ok)bs[k].classList.add("bad");
+$("fb").innerHTML=`<p><b>${ok?"✅ Correct!":"❌ Wrong!"}</b></p><div class="ex">${K.q[4]}</div><button class="b g" onclick="K.cb(${ok})">Next ➜</button>`}
+function friends(){ui(`<div class="cd"><h2>👥 Play with Friends</h2><p>Pass-and-play duel on this device: 10 questions, players take turns. Highest score wins!</p><input id="f2" placeholder="Friend's name"><button class="b g" onclick="duel()">⚔️ Start duel</button></div><button class="b" onclick="menu()">Back</button>`)}
+function duel(r){D={n:r?D.n:[P.name,$("f2").value.trim()||"Friend"],s:[0,0],i:0,qs:mixQs(10)};dq()}
+function dq(){if(D.i>=10){const a=D.s[0],b=D.s[1];return ui(`<div class="cd"><div class="big">🏁</div><h2>${a==b?"It's a draw! 🤝":esc(a>b?D.n[0]:D.n[1])+" wins! 🏆"}</h2><p>${esc(D.n[0])} ${a} – ${b} ${esc(D.n[1])}</p><button class="b g" onclick="duel(1)">Rematch</button><button class="b" onclick="menu()">Menu</button></div>`)}
+const p=D.i%2;ask(D.qs[D.i],`<b>👥 ${esc(D.n[p])}'s turn</b><br><small>Q${D.i+1}/10 · ${esc(D.n[0])} ${D.s[0]} – ${D.s[1]} ${esc(D.n[1])}</small>`,ok=>{if(ok)D.s[p]++;D.i++;dq()})}
+function arena(){A={r:["Byte Bandit","Hash Hunter","Logic Lord","Pigeon Phantom"][Math.floor(Math.random()*4)],s:0,b:0,i:0,qs:mixQs(10)};aq()}
+function aq(){if(A.i>=10){const w=A.s>A.b;if(w){P.coins+=30;P.xp+=25;P.arena=(P.arena||0)+1}sv();hud();return ui(`<div class="cd"><div class="big">${w?"🏆":A.s==A.b?"🤝":"💀"}</div><h2>${w?"You beat "+A.r+"!":A.s==A.b?"Draw!":A.r+" wins!"}</h2><p>${A.s} – ${A.b}${w?"<br>+30 🪙 · +25 XP":""}</p><button class="b g" onclick="arena()">⚔️ New match</button><button class="b" onclick="menu()">Menu</button></div>`)}
+ask(A.qs[A.i],`<b>🌐 Online Arena · vs ${A.r}</b><br><small>Q${A.i+1}/10 · You ${A.s} – ${A.b} ${A.r}</small>`,ok=>{if(ok)A.s++;if(Math.random()<.6)A.b++;A.i++;aq()})}
+function quick(){A={s:0,i:0,qs:mixQs(10)};qq()}
+function qq(){if(A.i>=10){const x=A.s*10;P.xp+=x;P.coins+=A.s*2;sv();hud();const r=A.s>=9?"Grandmaster 🧙":A.s>=7?"Champion ⚔️":A.s>=4?"Apprentice 🛡️":"Novice 🌱";return ui(`<div class="cd"><div class="big">🏆</div><h2>Quest complete!</h2><p><b>${r}</b><br>Score ${A.s}/10 · +${x} XP · +${A.s*2} 🪙</p><button class="b g" onclick="quick()">🔁 Play again</button><button class="b" onclick="menu()">Menu</button></div>`)}
+ask(A.qs[A.i],`<b>⚡ 10-Question Quest</b><br><small>Q${A.i+1}/10 · Score ${A.s}</small>`,ok=>{if(ok)A.s++;A.i++;qq()})}
+refresh();login();
+</script></body></html>
